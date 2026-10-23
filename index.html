@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#ffffff" />
     <title>Territory Desk</title>
+    <script>
+      if (typeof SharedArrayBuffer === 'undefined') {
+        const script = document.createElement('script');
+        script.src = new URL('./coi-serviceworker.js', location.href).href;
+        script.onload = () => { if (location.reload) location.reload(); };
+        document.head.appendChild(script);
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
