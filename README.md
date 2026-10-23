@@ -1,6 +1,6 @@
 # Territory Desk
 
-A local-first sales territory CRM for SAP account work. React, Vite, TypeScript, Express, and PGlite run entirely on your laptop.
+A browser-local sales territory CRM for SAP account work. React, Vite, TypeScript, ExcelJS, and PGlite run as a static website with no backend server.
 
 ## Run locally
 
@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`. PGlite stores data under `data/pglite`.
+Open the URL printed by Vite. PGlite stores data in that browser's IndexedDB database.
 
 ## Production build
 
@@ -18,7 +18,15 @@ npm run build
 npm start
 ```
 
-The production server runs at `http://localhost:4100`.
+The static production preview runs at `http://localhost:4100`.
+
+## GitHub Pages
+
+Push to `main`. The `Deploy GitHub Pages` workflow builds `dist/` and publishes it automatically. In the repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions** if it is not already selected.
+
+## Privacy and sharing
+
+No CRM records or imported workbooks are included in the deployed files. Excel files are parsed inside the browser, and records remain in that browser's IndexedDB storage. Different visitors do not share data or edits. Clearing site data removes that browser's CRM database.
 
 ## Import behavior
 

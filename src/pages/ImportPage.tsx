@@ -21,14 +21,14 @@ export function ImportPage() {
   });
   const drop = (event: DragEvent) => { event.preventDefault(); setDragging(false); addFiles([...event.dataTransfer.files]); };
   const upload = async () => {
-    const body = new FormData(); files.forEach((file) => body.append('files', file)); setUploading(true);
-    try { const response = await fetch('/api/import', { method: 'POST', body }); const result = await response.json(); if (!response.ok) throw new Error(result.error); setLatest(result.runs); setFiles([]); loadHistory(); }
+    setUploading(true);
+    try { const result = await api.importFiles(files); setLatest(result.runs as ImportRun[]); setFiles([]); loadHistory(); }
     catch (error) { setLatest([{ filename: 'Import', error: error instanceof Error ? error.message : 'Import failed' }]); }
     finally { setUploading(false); }
   };
 
   return <div className="page import-page">
-    <div className="page-heading"><div><h1>Import accounts</h1><p>Bring in territory, tracker, DIT, partner, and enriched workbooks.</p></div></div>
+    <div className="page-heading"><div><h1>Import accounts</h1><p>Files are processed in this browser and never uploaded to a server.</p></div></div>
     <div className="import-layout"><div className="import-main">
       <section className={`drop-zone ${dragging ? 'dragging' : ''}`} onDragOver={(e) => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={drop} onClick={() => inputRef.current?.click()}>
         <input ref={inputRef} type="file" accept=".xlsx" multiple hidden onChange={(e) => addFiles([...(e.target.files || [])])} />

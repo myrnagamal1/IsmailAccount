@@ -1,8 +1,35 @@
-import ExcelJS from 'exceljs';
-import { normalizeAccountName } from './db.js';
-import type { AccountStatus, Category, ParsedAccount, ParsedContact, ParsedWorkbook } from './types.js';
+import type ExcelJS from 'exceljs';
+import { normalizeAccountName } from './db';
+import type { Category, Status } from './types';
 
 type Row = Record<string, unknown>;
+
+export interface ParsedContact {
+  firstName: string;
+  lastName: string;
+  title: string;
+  email: string;
+  phone: string;
+  linkedin: string;
+}
+
+export interface ParsedAccount {
+  name: string;
+  category: Category;
+  categoryDeclared: boolean;
+  status: Status;
+  industry: string;
+  partner: string;
+  crmId: string;
+  notes: string;
+  contacts: ParsedContact[];
+}
+
+export interface ParsedWorkbook {
+  format: string;
+  accounts: ParsedAccount[];
+  warnings: string[];
+}
 
 const clean = (value: unknown) => (value == null ? '' : String(value).trim());
 const key = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -50,13 +77,13 @@ function contactFromRow(row: Row): ParsedContact | null {
   return Object.values(contact).some(Boolean) ? contact : null;
 }
 
-function mapStatus(value: string): AccountStatus {
+function mapStatus(value: string): Status {
   const v = key(value);
   if (v.includes('closed won') || v === 'won') return 'Closed Won';
   if (v.includes('proposal') || v.includes('quotation')) return 'Proposal';
   if (v.includes('meeting') || v.includes('scheduled')) return 'Meeting Scheduled';
   if (v.includes('interested') && !v.includes('not')) return 'Interested';
-  if (v.includes('not interested') || v.includes('disqualified') || v.includes('lost')) return 'Not Interested';
+  if (v.includes('not interested') || v.includes('not intrested') || v.includes('disqualified') || v.includes('lost')) return 'Not Interested';
   return 'Prospect';
 }
 
@@ -129,10 +156,7 @@ function detectFormat(filename: string, workbook: ExcelJS.Workbook) {
   if (lower.includes('dit') || /^p29\d\d/i.test(filename)) return 'dit';
   if (lower.includes('blitz')) return 'blitz';
   const sheetNames = workbook.worksheets.map((sheet) => sheet.name);
-  const headers = workbook.worksheets.flatMap((sheet) => {
-    const first = (sheet.getRow(1).values as unknown[]).slice(1);
-    return first.map((v) => key(clean(v)));
-  });
+  const headers = workbook.worksheets.flatMap((sheet) => ((sheet.getRow(1).values as unknown[]).slice(1)).map((v) => key(clean(v))));
   if (headers.includes('crm leading planning entity name') || sheetNames.some((s) => key(s) === 'account list')) return 'dit';
   if (headers.includes('type ib nn')) return 'merged';
   if (headers.includes('tier') && headers.includes('account name')) return 'tracker';
@@ -144,10 +168,7 @@ function mergeParsed(accounts: ParsedAccount[]) {
   for (const account of accounts) {
     const matchKey = account.crmId ? `crm:${account.crmId}` : `name:${normalizeAccountName(account.name)}`;
     const existing = merged.get(matchKey);
-    if (!existing) {
-      merged.set(matchKey, account);
-      continue;
-    }
+    if (!existing) { merged.set(matchKey, account); continue; }
     const rank: Record<Category, number> = { 'Non-CRM': 0, NN: 1, IB: 2, Active: 3 };
     if (account.categoryDeclared && rank[account.category] > rank[existing.category]) existing.category = account.category;
     existing.categoryDeclared ||= account.categoryDeclared;
@@ -194,15 +215,15 @@ function parseDit(workbook: ExcelJS.Workbook): ParsedAccount[] {
   return accounts;
 }
 
-export async function parseWorkbook(buffer: Buffer, filename: string): Promise<ParsedWorkbook> {
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
-  const format = detectFormat(filename, workbook);
+export async function parseWorkbook(file: File): Promise<ParsedWorkbook> {
+  const { default: ExcelRuntime } = await import('exceljs');
+  const workbook = new ExcelRuntime.Workbook();
+  await workbook.xlsx.load(await file.arrayBuffer() as never);
+  const format = detectFormat(file.name, workbook);
   const warnings: string[] = [];
   let accounts: ParsedAccount[] = [];
-  if (format === 'dit') {
-    accounts = parseDit(workbook);
-  } else {
+  if (format === 'dit') accounts = parseDit(workbook);
+  else {
     const preferred = workbook.worksheets.map((sheet) => sheet.name).filter((name) => !/duplicate|legend|summary|enrichment/i.test(name));
     for (const sheetName of preferred) {
       for (const row of rowsForSheet(workbook, sheetName)) {

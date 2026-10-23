@@ -42,7 +42,7 @@ export function Layout() {
             {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search"><X size={15} /></button>}
             <kbd>↵</kbd>
           </form>
-          <div className="topbar-meta"><span>Private workspace</span><div className="avatar" aria-label="Account executive">AE</div></div>
+          <div className="topbar-meta"><span>Browser-local workspace</span><div className="avatar" aria-label="Account executive">AE</div></div>
         </header>
         <main><Outlet /></main>
       </div>
